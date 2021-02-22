@@ -16,7 +16,7 @@ class _BottomBarState extends State<BottomBar> {
   static List<Widget> _widgetOptions = <Widget>[
     TimerPage(),
     ProgressPage(),
-    SettingsPage()
+    Settings()
   ];
 
   void _onItemTapped(int index) {

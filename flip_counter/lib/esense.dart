@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:esense_flutter/esense.dart';
 
-class Settings extends StatefulWidget {
+void main() => runApp(MyApp());
+
+class MyApp extends StatefulWidget {
   @override
-  _SettingsState createState() => _SettingsState();
+  _MyAppState createState() => _MyAppState();
 }
 
-class _SettingsState extends State<Settings> {
+class _MyAppState extends State<MyApp> {
   String _deviceName = 'Unknown';
   double _voltage = -1;
   String _deviceStatus = '';
@@ -17,7 +19,7 @@ class _SettingsState extends State<Settings> {
   bool connected = false;
 
   // the name of the eSense device to connect to -- change this to your own device.
-  String eSenseName = 'eSense-0264';
+  String eSenseName = 'eSense-0332';
 
   void initState() {
     super.initState();
