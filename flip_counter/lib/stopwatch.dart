@@ -35,6 +35,7 @@ class TimerPageState extends State<TimerPage> {
   int front = 0;
   int back = 0;
   double frequency = 0;
+  Timer timer;
 
   final Dependencies dependencies = new Dependencies();
 
@@ -86,8 +87,6 @@ class TimerPageState extends State<TimerPage> {
     }
   }
 
-  Timer timer;
-
   @override
   void initState() {
     timer = new Timer.periodic(new Duration(milliseconds: 100), callback);
@@ -123,7 +122,7 @@ class TimerPageState extends State<TimerPage> {
             ),
             new Text("Dauer", style: textStyle),
             new Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40.0),
+              padding: const EdgeInsets.symmetric(vertical: 15.0),
               child: new Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: <Widget>[

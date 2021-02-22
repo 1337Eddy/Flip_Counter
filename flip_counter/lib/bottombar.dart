@@ -1,4 +1,6 @@
-import 'package:flip_counter/home.dart';
+import 'package:flip_counter/CounterStorage.dart';
+import 'package:flip_counter/progress.dart';
+import 'package:flip_counter/settings.dart';
 import 'package:flip_counter/stopwatch.dart';
 import 'package:flutter/material.dart';
 
@@ -12,12 +14,9 @@ class _BottomBarState extends State<BottomBar> {
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
   static List<Widget> _widgetOptions = <Widget>[
-    HomePage(),
     TimerPage(),
-    Text(
-      'Index 2: School',
-      style: optionStyle,
-    ),
+    ProgressPage(),
+    SettingsPage()
   ];
 
   void _onItemTapped(int index) {
