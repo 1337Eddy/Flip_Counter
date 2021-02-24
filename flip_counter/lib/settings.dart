@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:esense_flutter/esense.dart';
 
+class DefaultSettings {
+  static String eSenseName = 'eSense-0264';
+}
+
 class Settings extends StatefulWidget {
   @override
   _SettingsState createState() => _SettingsState();
@@ -17,7 +21,17 @@ class _SettingsState extends State<Settings> {
   bool connected = false;
 
   // the name of the eSense device to connect to -- change this to your own device.
-  String eSenseName = 'eSense-0264';
+
+  String _xAxis = "undefined";
+  String _yAxis = "undefined";
+  String _zAxis = "undefined";
+  String sensorConfig = "undefined";
+  int counterA = 0;
+  int counterB = 0;
+
+  StreamSubscription subscription;
+
+  Timer timer;
 
   void initState() {
     super.initState();
@@ -59,14 +73,29 @@ class _SettingsState extends State<Settings> {
 
   Future _connectToESense() async {
     print('connecting... connected: $connected');
-    if (!connected) connected = await ESenseManager().connect(eSenseName);
-
+    if (!connected)
+      connected = await ESenseManager().connect(DefaultSettings.eSenseName);
+    print("Connected in Settings $connected");
     setState(() {
       _deviceStatus = connected ? 'connecting' : 'connection failed';
     });
   }
 
+  void listenToSensorEvents() async {
+    if (ESenseManager().connected) {
+      subscription = ESenseManager().sensorEvents.listen((event) {
+        List<int> values = event.accel;
+        setState(() {
+          _xAxis = (values[0] / 10).toString();
+          _yAxis = (values[1] / 10).toString();
+          _zAxis = (values[2] / 10).toString();
+        });
+      });
+    }
+  }
+
   void _listenToESenseEvents() async {
+    ESenseManager().setSamplingRate(1);
     ESenseManager().eSenseEvents.listen((event) {
       print('ESENSE event: $event');
 
@@ -77,6 +106,7 @@ class _SettingsState extends State<Settings> {
             break;
           case BatteryRead:
             _voltage = (event as BatteryRead).voltage;
+            counterB++;
             break;
           case ButtonEventChanged:
             _button = (event as ButtonEventChanged).pressed
@@ -84,13 +114,13 @@ class _SettingsState extends State<Settings> {
                 : 'not pressed';
             break;
           case AccelerometerOffsetRead:
-            // TODO
+            listenToSensorEvents();
             break;
           case AdvertisementAndConnectionIntervalRead:
             // TODO
             break;
           case SensorConfigRead:
-            // TODO
+            sensorConfig = (event as SensorConfigRead).toString();
             break;
         }
       });
@@ -122,7 +152,6 @@ class _SettingsState extends State<Settings> {
         () async => await ESenseManager().getSensorConfig());
   }
 
-  StreamSubscription subscription;
   void _startListenToSensorEvents() async {
     // subscribe to sensor event from the eSense device
     subscription = ESenseManager().sensorEvents.listen((event) {
@@ -150,39 +179,44 @@ class _SettingsState extends State<Settings> {
   }
 
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('eSense Demo App'),
+    return new Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('eSense Device Status: \t$_deviceStatus'),
+        Text('eSense Battery Level: \t$_voltage'),
+        Text('xAxis: \t$_xAxis'),
+        Text('yAxis: \t$_yAxis'),
+        Text('zAxis: \t$_zAxis'),
+        Text('\t$_button'),
+        TextFormField(
+          initialValue: DefaultSettings.eSenseName,
+          onChanged: (text) {
+            DefaultSettings.eSenseName = text;
+          },
+          decoration: InputDecoration(
+              border: OutlineInputBorder(), labelText: 'Gerätename'),
         ),
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: ListView(
-            children: [
-              Text('eSense Device Status: \t$_deviceStatus'),
-              Text('eSense Device Name: \t$_deviceName'),
-              Text('eSense Battery Level: \t$_voltage'),
-              Text('eSense Button Event: \t$_button'),
-              Text(''),
-              Text('$_event'),
-              Container(
-                height: 80,
-                width: 200,
-                decoration:
-                    BoxDecoration(borderRadius: BorderRadius.circular(10)),
-                child: TextButton.icon(
-                  onPressed: _connectToESense,
-                  icon: Icon(Icons.login),
-                  label: Text(
-                    'CONNECT....',
-                    style: TextStyle(fontSize: 35),
-                  ),
-                ),
-              ),
-            ],
+        Text('$_event'),
+        Container(
+          height: 40,
+          width: 200,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+          child: TextButton.icon(
+            onPressed: _connectToESense,
+            icon: Icon(Icons.login),
+            label: Text(
+              'connect',
+              style: TextStyle(fontSize: 25),
+            ),
           ),
         ),
-        floatingActionButton: FloatingActionButton(
+      ],
+    );
+  }
+}
+
+/*
+floatingActionButton: FloatingActionButton(
           // a floating button that starts/stops listening to sensor events.
           // is disabled until we're connected to the device.
           onPressed: (!ESenseManager().connected)
@@ -192,8 +226,5 @@ class _SettingsState extends State<Settings> {
                   : _pauseListenToSensorEvents,
           tooltip: 'Listen to eSense sensors',
           child: (!sampling) ? Icon(Icons.play_arrow) : Icon(Icons.pause),
-        ),
-      ),
-    );
-  }
-}
+        )
+*/
