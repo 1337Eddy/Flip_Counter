@@ -95,7 +95,6 @@ class _SettingsState extends State<Settings> {
   }
 
   void _listenToESenseEvents() async {
-    ESenseManager().setSamplingRate(1);
     ESenseManager().eSenseEvents.listen((event) {
       print('ESENSE event: $event');
 

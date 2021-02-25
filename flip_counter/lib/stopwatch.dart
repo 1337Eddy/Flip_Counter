@@ -1,8 +1,13 @@
+import 'package:esense_flutter/esense.dart';
+import 'package:flip_counter/esense.dart';
+import 'package:flip_counter/settings.dart';
 import 'package:flutter/material.dart';
 import 'timertext.dart';
 import 'dart:async';
 
 enum ButtonLabel { start, stop, reset }
+
+enum FlipPhase { phase1, frontPhase2, backPhase2, frontPhase3, backPhase3 }
 
 class ElapsedTime {
   final int hundreds;
@@ -36,6 +41,10 @@ class TimerPageState extends State<TimerPage> {
   int back = 0;
   double frequency = 0;
   Timer timer;
+  ESense esense;
+  StreamSubscription subscription;
+  List<List<int>> fifo;
+  FlipPhase flipPhase = FlipPhase.phase1;
 
   final Dependencies dependencies = new Dependencies();
 
@@ -48,12 +57,50 @@ class TimerPageState extends State<TimerPage> {
     });
   }
 
+/*
+  void detectFlip() {
+    if (dependencies.stopwatch.isRunning) {
+      ESenseManager().setSamplingRate(20);
+      subscription = ESenseManager().sensorEvents.listen((event) {
+        fifo.add(event.accel);
+        fifo.removeAt(0);
+        analysePattern();
+      });
+    }
+  }
+
+  void analysePattern() {
+    flipPhase = FlipPhase.phase1;
+    for (int i = 0; i < fifo.length; i++) {
+      switch (flipPhase) {
+        case FlipPhase.phase1:
+          if (fifo[i][0] > 0) {
+            flipPhase = FlipPhase.frontPhase2;
+          }
+          break;
+        case FlipPhase.frontPhase2:
+          if (fifo[i][0] > 500) {
+            flipPhase = FlipPhase.frontPhase3;
+          }
+          break;
+        case FlipPhase.frontPhase3:
+          if (fifo[i][0] < 0) {
+            addfront();
+          }
+          break;
+        default:
+      }
+      if (fifo[i][0] / 10 == 3) {}
+    }
+  }
+*/
   void startStopPressed() {
     setState(() {
-      if (dependencies.stopwatch.isRunning) {
-        dependencies.stopwatch.stop();
-      } else {
+      if (!dependencies.stopwatch.isRunning &&
+          esense.status == Status.CONNECTED) {
         dependencies.stopwatch.start();
+      } else {
+        dependencies.stopwatch.stop();
       }
     });
   }
@@ -71,7 +118,7 @@ class TimerPageState extends State<TimerPage> {
                     MaterialStateProperty.all<Color>(Colors.green)));
       case ButtonLabel.stop:
         return new ElevatedButton(
-            child: new Text("Pausieren", style: roundTextStyle),
+            child: new Text("Stop", style: roundTextStyle),
             onPressed: callback,
             style: ButtonStyle(
                 backgroundColor: MaterialStateProperty.all<Color>(Colors.red)));
@@ -87,9 +134,19 @@ class TimerPageState extends State<TimerPage> {
     }
   }
 
+  void initFifo() {
+    for (int i = 0; i < 30; i++) {
+      List<int> zero = [0, 0, 0];
+      fifo.add(zero);
+    }
+  }
+
   @override
   void initState() {
+    initFifo();
     timer = new Timer.periodic(new Duration(milliseconds: 100), callback);
+    esense = new ESense(DefaultSettings.eSenseName);
+    esense.connectToEsense();
     super.initState();
   }
 

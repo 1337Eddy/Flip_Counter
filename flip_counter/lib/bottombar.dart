@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flip_counter/CounterStorage.dart';
 import 'package:flip_counter/esense.dart';
 import 'package:flip_counter/progress.dart';
 import 'package:flip_counter/settings.dart';
@@ -16,10 +15,12 @@ class _BottomBarState extends State<BottomBar> {
   int _selectedIndex = 0;
   ESense esense;
   Timer timer;
+  bool connected = false;
+  Icon iconConnected = new Icon(Icons.bluetooth_connected);
+  Icon iconDisconnected = new Icon(Icons.bluetooth_disabled);
 
-  IconButton bluetoothSymbol = new IconButton(
-    icon: const Icon(Icons.bluetooth_disabled),
-  );
+  IconButton bluetoothSymbol =
+      new IconButton(icon: const Icon(Icons.bluetooth_disabled));
 
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
@@ -35,26 +36,39 @@ class _BottomBarState extends State<BottomBar> {
     });
   }
 
-  void setBluethoothIcon(Timer timer) {
+  void refreshConnection() {
+    esense.connectToEsense();
+  }
+
+  void setBluethoothIcon() {
     setState(() {
-      if (esense.status == "connected") {
+      if (esense.status == Status.CONNECTED) {
         bluetoothSymbol =
-            new IconButton(icon: const Icon(Icons.bluetooth_audio));
+            new IconButton(onPressed: refreshConnection, icon: iconConnected);
+        connected = true;
       } else {
-        bluetoothSymbol =
-            new IconButton(icon: const Icon(Icons.bluetooth_disabled));
-        esense.connectToEsense();
+        bluetoothSymbol = new IconButton(
+            onPressed: refreshConnection, icon: iconDisconnected);
+        connected = false;
       }
     });
+  }
+
+  void checkConnection(Timer timer) {
+    if (connected && bluetoothSymbol.icon == iconDisconnected) {
+      setBluethoothIcon();
+    } else if (!connected && bluetoothSymbol.icon == iconConnected) {
+      setBluethoothIcon();
+    }
   }
 
   @override
   void initState() {
     esense = new ESense(DefaultSettings.eSenseName);
-    esense.connectToEsense();
+    //esense.connectToEsense();
 
-    timer =
-        new Timer.periodic(new Duration(milliseconds: 100), setBluethoothIcon);
+    //timer =
+    //    new Timer.periodic(new Duration(milliseconds: 1000), checkConnection);
   }
 
   @override
