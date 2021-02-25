@@ -1,3 +1,4 @@
+import 'package:esense_flutter/esense.dart';
 import 'package:flutter/material.dart';
 import 'timertext.dart';
 import 'dart:async';
@@ -36,6 +37,7 @@ class TimerPageState extends State<TimerPage> {
   int back = 0;
   double frequency = 0;
   Timer timer;
+  StreamSubscription subscription;
 
   final Dependencies dependencies = new Dependencies();
 
@@ -90,7 +92,27 @@ class TimerPageState extends State<TimerPage> {
   @override
   void initState() {
     timer = new Timer.periodic(new Duration(milliseconds: 100), callback);
+    _listenToESense();
     super.initState();
+  }
+
+  Future _listenToESense() async {
+    ESenseManager().connectionEvents.listen((event) {
+      if (event.type == ConnectionType.connected) listenToSensorEvents();
+    });
+  }
+
+  void listenToSensorEvents() async {
+    if (ESenseManager().connected) {
+      subscription = ESenseManager().sensorEvents.listen((event) {
+        List<int> values = event.accel;
+        setState(() {
+          if ((values[0] / 10) > 1000) {
+            addfront();
+          }
+        });
+      });
+    }
   }
 
   void callback(Timer timer) {

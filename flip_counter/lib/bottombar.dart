@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flip_counter/CounterStorage.dart';
+import 'package:esense_flutter/esense.dart';
 import 'package:flip_counter/esense.dart';
 import 'package:flip_counter/progress.dart';
 import 'package:flip_counter/settings.dart';
@@ -18,7 +18,8 @@ class _BottomBarState extends State<BottomBar> {
   Timer timer;
 
   IconButton bluetoothSymbol = new IconButton(
-    icon: const Icon(Icons.bluetooth_disabled),
+    onPressed: () => ESenseManager().connect(DefaultSettings.eSenseName),
+    icon: new Icon(Icons.bluetooth_disabled),
   );
 
   static const TextStyle optionStyle =
@@ -35,26 +36,31 @@ class _BottomBarState extends State<BottomBar> {
     });
   }
 
-  void setBluethoothIcon(Timer timer) {
-    setState(() {
-      if (esense.status == "connected") {
-        bluetoothSymbol =
-            new IconButton(icon: const Icon(Icons.bluetooth_audio));
-      } else {
-        bluetoothSymbol =
-            new IconButton(icon: const Icon(Icons.bluetooth_disabled));
-        esense.connectToEsense();
-      }
-    });
+  Future<void> setBluethoothIcon(Timer timer) async {
+    var connected = ESenseManager().isConnected();
+    connected.then((connect) => {
+          setState(() {
+            if (connect) {
+              bluetoothSymbol = new IconButton(
+                onPressed: () => ESenseManager().disconnect(),
+                icon: new Icon(Icons.bluetooth_connected),
+              );
+            } else {
+              bluetoothSymbol = new IconButton(
+                onPressed: () =>
+                    ESenseManager().connect(DefaultSettings.eSenseName),
+                icon: new Icon(Icons.bluetooth_disabled),
+              );
+            }
+          })
+        });
   }
 
   @override
   void initState() {
-    esense = new ESense(DefaultSettings.eSenseName);
-    esense.connectToEsense();
-
     timer =
-        new Timer.periodic(new Duration(milliseconds: 100), setBluethoothIcon);
+        new Timer.periodic(new Duration(milliseconds: 500), setBluethoothIcon);
+    super.initState();
   }
 
   @override
