@@ -24,6 +24,9 @@ class _SettingsState extends State<Settings> {
   int counter = 0;
   String buttonPress = "not tabbed";
   int buttonPressCounter = 0;
+  int countValues = 0;
+
+  List<DataRow> rows = [];
 
   // the name of the eSense device to connect to -- change this to your own device.
 
@@ -102,21 +105,69 @@ class _SettingsState extends State<Settings> {
               List<int> values = event.accel;
               int x = values[0];
               int y = values[1];
+              int z = values[2];
+              int valueRefreshed = 25;
+
+              // Conditions
+              bool startToF1 = x < -20000;
+              bool toBack = x < -15000;
+              bool toFront = x < -20000;
+              bool f1ToF2 = x > 15000 && y > 20000 && z < -15000;
+              bool f1ToF3 = x > 25000 && y > 9000 && z < -15000;
+              bool f2ToF3;
+              bool f3ToF4;
+
               switch (state) {
                 case States.start:
-                  if (x > 20000 && y > 20000) {
-                    state = States.front;
+                  if (startToF1) {
+                    state = States.f1;
                   } else {
                     state = States.start;
+                    countValues = 0;
                   }
                   break;
 
-                case States.front:
-                  if (x > 20000 && y > 20000) {
+                case States.f1:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (f1ToF2) {
+                    countValues = 0;
+                    state = States.f2;
+                  } else if (f1ToF3) {
+                    state = States.f3;
+                  } else {
+                    state = States.f1;
+                  }
+                  countValues++;
+                  break;
+
+                case States.f2:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (toBack) {
+                    countValues = 0;
+                    state = States.back;
+                  } else {
+                    state = States.f2;
+                  }
+                  countValues++;
+                  break;
+
+                case States.f3:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (toFront) {
+                    countValues = 0;
                     state = States.front;
                   } else {
-                    state = States.start;
+                    state = States.f3;
                   }
+                  countValues++;
+                  break;
+
+                case States.front:
+                  state = States.start;
+                  countValues = 0;
                   setState(() {
                     front++;
                   });
@@ -133,6 +184,12 @@ class _SettingsState extends State<Settings> {
                 _xAxis = values[0].toString();
                 _yAxis = values[1].toString();
                 _zAxis = values[2].toString();
+
+                rows.add(DataRow(cells: [
+                  DataCell(Text("$_xAxis")),
+                  DataCell(Text("$_yAxis")),
+                  DataCell(Text("$_zAxis")),
+                ]));
               });
             },
           )
@@ -196,35 +253,55 @@ class _SettingsState extends State<Settings> {
   }
 
   Widget build(BuildContext context) {
-    return new Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('eSense Device Status: \t$_deviceStatus'),
-        Text('eSense Battery Level: \t$_voltage'),
-        Text('xAxis: \t$_xAxis'),
-        Text('yAxis: \t$_yAxis'),
-        Text('zAxis: \t$_zAxis'),
-        Text('\t$_button'),
-        TextFormField(
-          initialValue: DefaultSettings.eSenseName,
-          onChanged: (text) {
-            DefaultSettings.eSenseName = text;
-          },
-          decoration: InputDecoration(
-              border: OutlineInputBorder(), labelText: 'Gerätename'),
-        ),
-        ElevatedButton(
-          child: text,
-          onPressed: listenToSensorEvents,
-        ),
-        ElevatedButton(
-          child: new Text("Unsubscribe"),
-          onPressed: () => {subscription.cancel()},
-        ),
-        Text('Front: \t$front'),
-        Text('Back: \t$back'),
-        Text('Status: \t $buttonPress'),
-      ],
-    );
+    return SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: new Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('eSense Device Status: \t$_deviceStatus'),
+            Text('eSense Battery Level: \t$_voltage'),
+            Text('xAxis: \t$_xAxis'),
+            Text('yAxis: \t$_yAxis'),
+            Text('zAxis: \t$_zAxis'),
+            Text('\t$_button'),
+            TextFormField(
+              initialValue: DefaultSettings.eSenseName,
+              onChanged: (text) {
+                DefaultSettings.eSenseName = text;
+              },
+              decoration: InputDecoration(
+                  border: OutlineInputBorder(), labelText: 'Gerätename'),
+            ),
+            ElevatedButton(
+              child: text,
+              onPressed: listenToSensorEvents,
+            ),
+            ElevatedButton(
+              child: new Text("Unsubscribe"),
+              onPressed: () => {subscription.cancel()},
+            ),
+            Text('Front: \t$front'),
+            Text('Back: \t$back'),
+            Text('Status: \t $buttonPress'),
+            ElevatedButton(
+              child: new Text("Del Entries"),
+              onPressed: () => setState(() {
+                if (rows.length < 10) {
+                  rows = [];
+                } else {
+                  rows.removeRange(0, 10);
+                }
+              }),
+              onLongPress: () => setState(() {
+                rows.removeRange(0, 50);
+              }),
+            ),
+            DataTable(columns: [
+              DataColumn(label: Text("x-Achse")),
+              DataColumn(label: Text("y-Achse")),
+              DataColumn(label: Text("z-Achse"))
+            ], rows: rows),
+          ],
+        ));
   }
 }

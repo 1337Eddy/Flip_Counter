@@ -6,7 +6,7 @@ import 'dart:async';
 
 enum ButtonLabel { start, stop, reset }
 
-enum States { start, f1, f2, front, back }
+enum States { start, f1, f2, f3, front, back }
 
 class ElapsedTime {
   final int hundreds;
@@ -76,10 +76,17 @@ class TimerPageState extends State<TimerPage> {
               List<int> values = event.accel;
               int x = values[0];
               int y = values[1];
+              int z = values[2];
+              int valueRefreshed = 25;
 
               // Conditions
               bool startToF1 = x < -20000;
-              bool f1ToFront = x > 20000 && y > 20000;
+              bool toBack = x < -15000;
+              bool toFront = x < -20000;
+              bool f1ToF2 = x > 15000 && y > 20000 && z < -15000;
+              bool f1ToF3 = x > 25000 && y > 9000 && z < -15000;
+              bool f2ToF3;
+              bool f3ToF4;
 
               switch (state) {
                 case States.start:
@@ -92,13 +99,39 @@ class TimerPageState extends State<TimerPage> {
                   break;
 
                 case States.f1:
-                  if (countValues > 10) {
+                  if (countValues > valueRefreshed) {
                     state = States.start;
-                  } else if (f1ToFront) {
+                  } else if (f1ToF2) {
+                    countValues = 0;
+                    state = States.f2;
+                  } else if (f1ToF3) {
+                    state = States.f3;
+                  } else {
+                    state = States.f1;
+                  }
+                  countValues++;
+                  break;
+
+                case States.f2:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (toBack) {
+                    countValues = 0;
+                    state = States.back;
+                  } else {
+                    state = States.f2;
+                  }
+                  countValues++;
+                  break;
+
+                case States.f3:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (toFront) {
                     countValues = 0;
                     state = States.front;
                   } else {
-                    state = States.f1;
+                    state = States.f3;
                   }
                   countValues++;
                   break;
@@ -148,7 +181,7 @@ class TimerPageState extends State<TimerPage> {
                     MaterialStateProperty.all<Color>(Colors.green)));
       case ButtonLabel.stop:
         return new ElevatedButton(
-            child: new Text("Pausieren", style: roundTextStyle),
+            child: new Text("Stop", style: roundTextStyle),
             onPressed: callback,
             style: ButtonStyle(
                 backgroundColor: MaterialStateProperty.all<Color>(Colors.red)));
