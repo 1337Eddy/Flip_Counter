@@ -1,3 +1,4 @@
+import 'package:flip_counter/CounterStorage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -13,8 +14,25 @@ class ProgressPage extends StatefulWidget {
 }
 
 class _ProgressPageState extends State<ProgressPage> {
+  CounterStorage storage = new CounterStorage();
+  List<Text> values = [];
+
+  void setValues() {
+    setState(() {
+      storage.readTraining().then((value) => values);
+    });
+  }
+
+  @override
+  void initState() {
+    setValues();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return new Column();
+    return new Column(
+      children: values,
+    );
   }
 }

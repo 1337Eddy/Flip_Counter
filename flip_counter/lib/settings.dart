@@ -22,6 +22,8 @@ class _SettingsState extends State<Settings> {
   String _button = 'not pressed';
   bool connected = false;
   int counter = 0;
+  String buttonPress = "not tabbed";
+  int buttonPressCounter = 0;
 
   // the name of the eSense device to connect to -- change this to your own device.
 
@@ -41,7 +43,7 @@ class _SettingsState extends State<Settings> {
 
   void initState() {
     _listenToESense();
-    listenToSensorEvents();
+    //listenToSensorEvents();
 
     super.initState();
   }
@@ -55,7 +57,6 @@ class _SettingsState extends State<Settings> {
       // when we're connected to the eSense device, we can start listening to events from it
       if (event.type == ConnectionType.connected) {
         _listenToESenseEvents();
-        listenToSensorEvents();
       }
 
       setState(() {
@@ -92,108 +93,49 @@ class _SettingsState extends State<Settings> {
 */
 
   void listenToSensorEvents() async {
+    //subscription.cancel();
     ESenseManager().setSamplingRate(20);
     var connected = ESenseManager().isConnected();
     connected.then((value) => {
-          if (value)
-            {
-              subscription = ESenseManager().sensorEvents.listen((event) {
-                List<int> values = event.accel;
-                int x = values[0];
-                int y = values[1];
-                int threshold = 5000;
-                switch (state) {
-                  case States.start:
-                    if (x > 0 && y > 0) {
-                      state = States.f1;
-                    } else if (x < 0 && y < 0) {
-                      state = States.b1;
-                    } else {
-                      state = States.start;
-                    }
-                    break;
-
-                  case States.f1:
-                    if (x > 0 && y < 0) {
-                      state = States.f2;
-                    } else if (x > 0 && y > 0) {
-                      state = States.f1;
-                    } else {
-                      state = States.start;
-                    }
-                    break;
-
-                  case States.f2:
-                    if (x < 0 && y < 0) {
-                      state = States.f3;
-                    } else if (x > 0 && y < 0) {
-                      state = States.f2;
-                    } else {
-                      state = States.start;
-                    }
-                    break;
-
-                  case States.f3:
-                    if (x < 0 && y > 0) {
-                      state = States.front;
-                    } else if (x < 0 && y < 0) {
-                      state = States.f3;
-                    } else {
-                      state = States.start;
-                    }
-                    break;
-
-                  case States.b1:
-                    if (x > 0 && y < 0) {
-                      state = States.b2;
-                    } else if (x < 0 && y < 0) {
-                      state = States.b1;
-                    } else {
-                      state = States.start;
-                    }
-                    break;
-
-                  case States.b2:
-                    if (x > 0 && y > 0) {
-                      state = States.b3;
-                    } else if (x > 0 && y < 0) {
-                      state = States.b2;
-                    } else {
-                      state = States.start;
-                    }
-                    break;
-
-                  case States.b3:
-                    if (x < 0 && y > 0) {
-                      state = States.back;
-                    } else if (x > 0 && y > 0) {
-                      state = States.b3;
-                    } else {
-                      state = States.start;
-                    }
-                    break;
-
-                  case States.front:
-                    setState(() {
-                      front++;
-                    });
+          subscription = ESenseManager().sensorEvents.listen(
+            (event) {
+              List<int> values = event.accel;
+              int x = values[0];
+              int y = values[1];
+              switch (state) {
+                case States.start:
+                  if (x > 20000 && y > 20000) {
+                    state = States.front;
+                  } else {
                     state = States.start;
-                    break;
+                  }
+                  break;
 
-                  case States.back:
-                    setState(() {
-                      back++;
-                    });
+                case States.front:
+                  if (x > 20000 && y > 20000) {
+                    state = States.front;
+                  } else {
                     state = States.start;
-                    break;
-                }
-                setState(() {
-                  _xAxis = values[0].toString();
-                  _yAxis = values[1].toString();
-                  _zAxis = values[2].toString();
-                });
-              })
-            }
+                  }
+                  setState(() {
+                    front++;
+                  });
+                  break;
+
+                case States.back:
+                  setState(() {
+                    back++;
+                  });
+                  state = States.start;
+                  break;
+              }
+              setState(() {
+                _xAxis = values[0].toString();
+                _yAxis = values[1].toString();
+                _zAxis = values[2].toString();
+              });
+            },
+          )
         });
   }
 
@@ -275,8 +217,13 @@ class _SettingsState extends State<Settings> {
           child: text,
           onPressed: listenToSensorEvents,
         ),
+        ElevatedButton(
+          child: new Text("Unsubscribe"),
+          onPressed: () => {subscription.cancel()},
+        ),
         Text('Front: \t$front'),
-        Text('Back: \t$back')
+        Text('Back: \t$back'),
+        Text('Status: \t $buttonPress'),
       ],
     );
   }

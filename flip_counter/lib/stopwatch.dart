@@ -1,9 +1,12 @@
 import 'package:esense_flutter/esense.dart';
+import 'package:flip_counter/CounterStorage.dart';
 import 'package:flutter/material.dart';
 import 'timertext.dart';
 import 'dart:async';
 
 enum ButtonLabel { start, stop, reset }
+
+enum States { start, f1, f2, front, back }
 
 class ElapsedTime {
   final int hundreds;
@@ -38,24 +41,96 @@ class TimerPageState extends State<TimerPage> {
   double frequency = 0;
   Timer timer;
   StreamSubscription subscription;
+  States state = States.start;
+  int countValues = 0;
 
   final Dependencies dependencies = new Dependencies();
 
   void resetPressed() {
+    var connected = ESenseManager().isConnected();
+    connected.then((connect) => {
+          setState(() {
+            if (connect) {
+              subscription.cancel();
+            }
+          })
+        });
+
     setState(() {
       dependencies.stopwatch.stop();
+      String data = dependencies.stopwatch.toString() + "$front";
+      CounterStorage storage = new CounterStorage();
+      storage.writeTraining(data);
       dependencies.stopwatch.reset();
       front = 0;
       back = 0;
     });
   }
 
+  void listenToSensorEvents() async {
+    ESenseManager().setSamplingRate(20);
+    var connected = ESenseManager().isConnected();
+    connected.then((value) => {
+          subscription = ESenseManager().sensorEvents.listen(
+            (event) {
+              List<int> values = event.accel;
+              int x = values[0];
+              int y = values[1];
+
+              // Conditions
+              bool startToF1 = x < -20000;
+              bool f1ToFront = x > 20000 && y > 20000;
+
+              switch (state) {
+                case States.start:
+                  if (startToF1) {
+                    state = States.f1;
+                  } else {
+                    state = States.start;
+                    countValues = 0;
+                  }
+                  break;
+
+                case States.f1:
+                  if (countValues > 10) {
+                    state = States.start;
+                  } else if (f1ToFront) {
+                    countValues = 0;
+                    state = States.front;
+                  } else {
+                    state = States.f1;
+                  }
+                  countValues++;
+                  break;
+
+                case States.front:
+                  state = States.start;
+                  countValues = 0;
+                  setState(() {
+                    front++;
+                  });
+                  break;
+
+                case States.back:
+                  setState(() {
+                    back++;
+                  });
+                  state = States.start;
+                  break;
+              }
+            },
+          )
+        });
+  }
+
   void startStopPressed() {
     setState(() {
       if (dependencies.stopwatch.isRunning) {
         dependencies.stopwatch.stop();
+        subscription.cancel();
       } else {
         dependencies.stopwatch.start();
+        listenToSensorEvents();
       }
     });
   }
@@ -92,27 +167,7 @@ class TimerPageState extends State<TimerPage> {
   @override
   void initState() {
     timer = new Timer.periodic(new Duration(milliseconds: 100), callback);
-    _listenToESense();
     super.initState();
-  }
-
-  Future _listenToESense() async {
-    ESenseManager().connectionEvents.listen((event) {
-      if (event.type == ConnectionType.connected) listenToSensorEvents();
-    });
-  }
-
-  void listenToSensorEvents() async {
-    if (ESenseManager().connected) {
-      subscription = ESenseManager().sensorEvents.listen((event) {
-        List<int> values = event.accel;
-        setState(() {
-          if ((values[0] / 10) > 1000) {
-            addfront();
-          }
-        });
-      });
-    }
   }
 
   void callback(Timer timer) {
@@ -186,26 +241,6 @@ class TimerPageState extends State<TimerPage> {
                         : ButtonLabel.start,
                     startStopPressed),
                 buildFloatingButton(ButtonLabel.reset, resetPressed),
-              ],
-            ),
-          ),
-        ),
-
-        new Expanded(
-          flex: 0,
-          child: new Padding(
-            padding: const EdgeInsets.symmetric(vertical: 50.0),
-            child: new Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                new ElevatedButton(
-                  child: new Text("Front"),
-                  onPressed: addfront,
-                ),
-                new ElevatedButton(
-                  child: new Text("Back"),
-                  onPressed: addback,
-                )
               ],
             ),
           ),

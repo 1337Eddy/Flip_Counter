@@ -1,8 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 class CounterStorage {
@@ -18,73 +17,25 @@ class CounterStorage {
     return File('$path/counter.txt');
   }
 
-  Future<int> readCounter() async {
+  Future<List<String>> readTraining() async {
     try {
       final file = await _localFile;
 
       // Read the file
       String contents = await file.readAsString();
-
-      return int.parse(contents);
+      LineSplitter ls = new LineSplitter();
+      List<String> lines = ls.convert(contents);
+      return lines;
     } catch (e) {
-      // If encountering an error, return 0
-      return 0;
+      return [""];
     }
   }
 
-  Future<File> writeCounter(int counter) async {
+  Future<File> writeTraining(String text) async {
     final file = await _localFile;
-
+    List<String> lines = await readTraining();
+    lines.add(text);
     // Write the file
-    return file.writeAsString('$counter');
-  }
-}
-
-class FlutterDemo extends StatefulWidget {
-  final CounterStorage storage;
-
-  FlutterDemo({Key key, @required this.storage}) : super(key: key);
-
-  @override
-  _FlutterDemoState createState() => _FlutterDemoState();
-}
-
-class _FlutterDemoState extends State<FlutterDemo> {
-  int _counter;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.storage.readCounter().then((int value) {
-      setState(() {
-        _counter = value;
-      });
-    });
-  }
-
-  Future<File> _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-
-    // Write the variable as a string to the file.
-    return widget.storage.writeCounter(_counter);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Reading and Writing Files')),
-      body: Center(
-        child: Text(
-          'Button tapped $_counter time${_counter == 1 ? '' : 's'}.',
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ),
-    );
+    return file.writeAsString('$lines');
   }
 }

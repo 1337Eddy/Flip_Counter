@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:esense_flutter/esense.dart';
-import 'package:flip_counter/esense.dart';
 import 'package:flip_counter/progress.dart';
 import 'package:flip_counter/settings.dart';
 import 'package:flip_counter/stopwatch.dart';
@@ -14,7 +13,6 @@ class BottomBar extends StatefulWidget {
 
 class _BottomBarState extends State<BottomBar> {
   int _selectedIndex = 0;
-  ESense esense;
   Timer timer;
 
   IconButton bluetoothSymbol = new IconButton(
@@ -42,7 +40,6 @@ class _BottomBarState extends State<BottomBar> {
           setState(() {
             if (connect) {
               bluetoothSymbol = new IconButton(
-                onPressed: () => ESenseManager().disconnect(),
                 icon: new Icon(Icons.bluetooth_connected),
               );
             } else {
