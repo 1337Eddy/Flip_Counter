@@ -1,5 +1,4 @@
 import 'package:esense_flutter/esense.dart';
-import 'package:flip_counter/CounterStorage.dart';
 import 'package:flutter/material.dart';
 import 'timertext.dart';
 import 'dart:async';
@@ -58,9 +57,6 @@ class TimerPageState extends State<TimerPage> {
 
     setState(() {
       dependencies.stopwatch.stop();
-      String data = dependencies.stopwatch.toString() + "$front";
-      CounterStorage storage = new CounterStorage();
-      storage.writeTraining(data);
       dependencies.stopwatch.reset();
       front = 0;
       back = 0;

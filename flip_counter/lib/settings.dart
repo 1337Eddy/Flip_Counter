@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:esense_flutter/esense.dart';
 
-enum States { start, f1, f2, f3, f4, b1, b2, b3, b4, b5, front, back }
+enum States { start, f1, f2, f3, front, back }
 
 class DefaultSettings {
   static String eSenseName = 'eSense-0264';
@@ -18,8 +18,6 @@ class _SettingsState extends State<Settings> {
   double _voltage = -1;
   String _deviceStatus = '';
   bool sampling = false;
-  String _event = '';
-  String _button = 'not pressed';
   bool connected = false;
   int counter = 0;
   String buttonPress = "not tabbed";
@@ -30,9 +28,9 @@ class _SettingsState extends State<Settings> {
 
   // the name of the eSense device to connect to -- change this to your own device.
 
-  String _xAxis = "undefined";
-  String _yAxis = "undefined";
-  String _zAxis = "undefined";
+  String _xAxis = "null";
+  String _yAxis = "null";
+  String _zAxis = "null";
   String sensorConfig = "undefined";
   int front = 0;
   int back = 0;
@@ -209,11 +207,6 @@ class _SettingsState extends State<Settings> {
           case BatteryRead:
             _voltage = (event as BatteryRead).voltage;
             break;
-          case ButtonEventChanged:
-            _button = (event as ButtonEventChanged).pressed
-                ? 'pressed'
-                : 'not pressed';
-            break;
           case AccelerometerOffsetRead:
             break;
           case AdvertisementAndConnectionIntervalRead:
@@ -258,49 +251,76 @@ class _SettingsState extends State<Settings> {
         child: new Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('eSense Device Status: \t$_deviceStatus'),
-            Text('eSense Battery Level: \t$_voltage'),
-            Text('xAxis: \t$_xAxis'),
-            Text('yAxis: \t$_yAxis'),
-            Text('zAxis: \t$_zAxis'),
-            Text('\t$_button'),
-            TextFormField(
-              initialValue: DefaultSettings.eSenseName,
-              onChanged: (text) {
-                DefaultSettings.eSenseName = text;
-              },
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(), labelText: 'Gerätename'),
+            new Padding(
+                padding: const EdgeInsets.symmetric(vertical: 55.0),
+                child: TextFormField(
+                  initialValue: DefaultSettings.eSenseName,
+                  onChanged: (text) {
+                    DefaultSettings.eSenseName = text;
+                  },
+                  decoration: InputDecoration(
+                      border: OutlineInputBorder(), labelText: 'Gerätename'),
+                )),
+            Center(
+                child: new Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 15.0),
+                    child: Text('Geräte Status: \t$_deviceStatus'))),
+            Center(
+              child: new Padding(
+                padding: const EdgeInsets.symmetric(vertical: 15.0),
+                child: Text('Batterie Status: \t$_voltage'),
+              ),
             ),
-            ElevatedButton(
-              child: text,
-              onPressed: listenToSensorEvents,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 15.0),
+              child: new Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    child: text,
+                    onPressed: listenToSensorEvents,
+                  ),
+                  ElevatedButton(
+                    child: new Text("Stop"),
+                    onPressed: () => {subscription.cancel()},
+                  ),
+                  ElevatedButton(
+                    child: new Text("Delete Table"),
+                    onPressed: () => setState(() {
+                      rows = [];
+                    }),
+                  ),
+                ],
+              ),
             ),
-            ElevatedButton(
-              child: new Text("Unsubscribe"),
-              onPressed: () => {subscription.cancel()},
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 15.0),
+              child: new Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text('x-Axis: \t$_xAxis'),
+                  Text('y-Axis: \t$_yAxis'),
+                  Text('z-Axis: \t$_zAxis'),
+                ],
+              ),
             ),
-            Text('Front: \t$front'),
-            Text('Back: \t$back'),
-            Text('Status: \t $buttonPress'),
-            ElevatedButton(
-              child: new Text("Del Entries"),
-              onPressed: () => setState(() {
-                if (rows.length < 10) {
-                  rows = [];
-                } else {
-                  rows.removeRange(0, 10);
-                }
-              }),
-              onLongPress: () => setState(() {
-                rows.removeRange(0, 50);
-              }),
+            new Padding(
+              padding: const EdgeInsets.symmetric(vertical: 15.0),
+              child: new Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text('Front: \t$front'),
+                  Text('Back: \t$back'),
+                ],
+              ),
             ),
-            DataTable(columns: [
-              DataColumn(label: Text("x-Achse")),
-              DataColumn(label: Text("y-Achse")),
-              DataColumn(label: Text("z-Achse"))
-            ], rows: rows),
+            Center(
+              child: DataTable(columns: [
+                DataColumn(label: Text("x-Achse")),
+                DataColumn(label: Text("y-Achse")),
+                DataColumn(label: Text("z-Achse"))
+              ], rows: rows),
+            )
           ],
         ));
   }

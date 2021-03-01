@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:esense_flutter/esense.dart';
-import 'package:flip_counter/progress.dart';
 import 'package:flip_counter/settings.dart';
 import 'package:flip_counter/stopwatch.dart';
 import 'package:flutter/material.dart';
@@ -22,11 +21,7 @@ class _BottomBarState extends State<BottomBar> {
 
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
-  static List<Widget> _widgetOptions = <Widget>[
-    TimerPage(),
-    ProgressPage(),
-    Settings()
-  ];
+  static List<Widget> _widgetOptions = <Widget>[TimerPage(), Settings()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -74,10 +69,6 @@ class _BottomBarState extends State<BottomBar> {
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.insights),
-            label: 'Fortschritt',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
