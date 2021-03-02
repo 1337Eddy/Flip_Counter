@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:esense_flutter/esense.dart';
 
-enum States { start, f1, f2, f3, front, back }
+enum States { start, q1, q2, q3, front, back }
 
 class DefaultSettings {
   static String eSenseName = 'eSense-0264';
@@ -34,7 +34,6 @@ class _SettingsState extends State<Settings> {
   String sensorConfig = "undefined";
   int front = 0;
   int back = 0;
-  Text text = new Text("Start");
 
   States state = States.start;
 
@@ -94,7 +93,6 @@ class _SettingsState extends State<Settings> {
 */
 
   void listenToSensorEvents() async {
-    //subscription.cancel();
     ESenseManager().setSamplingRate(20);
     var connected = ESenseManager().isConnected();
     connected.then((value) => {
@@ -107,58 +105,56 @@ class _SettingsState extends State<Settings> {
               int valueRefreshed = 25;
 
               // Conditions
-              bool startToF1 = x < -20000;
+              bool startToQ1 = x < -20000;
               bool toBack = x < -15000;
               bool toFront = x < -20000;
-              bool f1ToF2 = x > 15000 && y > 20000 && z < -15000;
-              bool f1ToF3 = x > 25000 && y > 9000 && z < -15000;
-              bool f2ToF3;
-              bool f3ToF4;
+              bool q1ToQ2 = x > 15000 && y > 20000 && z < -15000;
+              bool q1ToQ3 = x > 25000 && y > 9000 && z < -15000;
 
               switch (state) {
                 case States.start:
-                  if (startToF1) {
-                    state = States.f1;
+                  if (startToQ1) {
+                    state = States.q1;
                   } else {
                     state = States.start;
                     countValues = 0;
                   }
                   break;
 
-                case States.f1:
+                case States.q1:
                   if (countValues > valueRefreshed) {
                     state = States.start;
-                  } else if (f1ToF2) {
+                  } else if (q1ToQ2) {
                     countValues = 0;
-                    state = States.f2;
-                  } else if (f1ToF3) {
-                    state = States.f3;
+                    state = States.q2;
+                  } else if (q1ToQ3) {
+                    state = States.q3;
                   } else {
-                    state = States.f1;
+                    state = States.q1;
                   }
                   countValues++;
                   break;
 
-                case States.f2:
+                case States.q2:
                   if (countValues > valueRefreshed) {
                     state = States.start;
                   } else if (toBack) {
                     countValues = 0;
                     state = States.back;
                   } else {
-                    state = States.f2;
+                    state = States.q2;
                   }
                   countValues++;
                   break;
 
-                case States.f3:
+                case States.q3:
                   if (countValues > valueRefreshed) {
                     state = States.start;
                   } else if (toFront) {
                     countValues = 0;
                     state = States.front;
                   } else {
-                    state = States.f3;
+                    state = States.q3;
                   }
                   countValues++;
                   break;
@@ -277,12 +273,12 @@ class _SettingsState extends State<Settings> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   ElevatedButton(
-                    child: text,
+                    child: new Text("Start"),
                     onPressed: listenToSensorEvents,
                   ),
                   ElevatedButton(
                     child: new Text("Stop"),
-                    onPressed: () => {subscription.cancel()},
+                    onPressed: () => {subscription.pause()},
                   ),
                   ElevatedButton(
                     child: new Text("Delete Table"),
@@ -298,9 +294,9 @@ class _SettingsState extends State<Settings> {
               child: new Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Text('x-Axis: \t$_xAxis'),
-                  Text('y-Axis: \t$_yAxis'),
-                  Text('z-Axis: \t$_zAxis'),
+                  Text('x-Achse: \t$_xAxis'),
+                  Text('y-Achse: \t$_yAxis'),
+                  Text('z-Achse: \t$_zAxis'),
                 ],
               ),
             ),
@@ -309,8 +305,8 @@ class _SettingsState extends State<Settings> {
               child: new Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Text('Front: \t$front'),
-                  Text('Back: \t$back'),
+                  Text('Frontflip: \t$front'),
+                  Text('Backflip: \t$back'),
                 ],
               ),
             ),

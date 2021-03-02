@@ -36,6 +36,7 @@ class _BottomBarState extends State<BottomBar> {
             if (connect) {
               bluetoothSymbol = new IconButton(
                 icon: new Icon(Icons.bluetooth_connected),
+                onPressed: () => {},
               );
             } else {
               bluetoothSymbol = new IconButton(
