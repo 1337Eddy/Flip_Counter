@@ -1,0 +1,45 @@
+dk/cachet/esense_flutter/BuildConfig.java
+ dk.cachet.esense_flutter.BuildConfig
+dk/cachet/esense_flutter/ESenseManagerMethodCallHandler.java
+ dk.cachet.esense_flutter.ESenseManagerMethodCallHandler
+io/esense/esenselib/ESenseEventListener.java
+ io.esense.esenselib.ESenseEventListener
+io/esense/esenselib/ESenseManager.java
+ io.esense.esenselib.ESenseManager
+ io.esense.esenselib.ESenseManager$1
+ io.esense.esenselib.ESenseManager$ESenseBGattCallback
+dk/cachet/esense_flutter/ESenseEventStreamHandler.java
+ dk.cachet.esense_flutter.ESenseEventStreamHandler
+dk/cachet/esense_flutter/EsenseFlutterPlugin.java
+ dk.cachet.esense_flutter.EsenseFlutterPlugin
+io/esense/esenselib/ESenseSensorListener.java
+ io.esense.esenselib.ESenseSensorListener
+dk/cachet/esense_flutter/MainThreadResult.java
+ dk.cachet.esense_flutter.MainThreadResult
+ dk.cachet.esense_flutter.MainThreadResult$1
+ dk.cachet.esense_flutter.MainThreadResult$2
+ dk.cachet.esense_flutter.MainThreadResult$3
+dk/cachet/esense_flutter/MainThreadEventSink.java
+ dk.cachet.esense_flutter.MainThreadEventSink
+ dk.cachet.esense_flutter.MainThreadEventSink$1
+ dk.cachet.esense_flutter.MainThreadEventSink$2
+ dk.cachet.esense_flutter.MainThreadEventSink$3
+io/esense/esenselib/SamplingStatus.java
+ io.esense.esenselib.SamplingStatus
+io/esense/esenselib/ESenseEvent.java
+ io.esense.esenselib.ESenseEvent
+io/esense/esenselib/ESenseConfig.java
+ io.esense.esenselib.ESenseConfig
+ io.esense.esenselib.ESenseConfig$1
+ io.esense.esenselib.ESenseConfig$AccLPF
+ io.esense.esenselib.ESenseConfig$AccRange
+ io.esense.esenselib.ESenseConfig$GyroLPF
+ io.esense.esenselib.ESenseConfig$GyroRange
+dk/cachet/esense_flutter/ESenseConnectionEventStreamHandler.java
+ dk.cachet.esense_flutter.ESenseConnectionEventStreamHandler
+io/esense/esenselib/ESenseConnectionListener.java
+ io.esense.esenselib.ESenseConnectionListener
+dk/cachet/esense_flutter/ESenseSensorEventStreamHandler.java
+ dk.cachet.esense_flutter.ESenseSensorEventStreamHandler
+io/esense/esenselib/ESenseScanner.java
+ io.esense.esenselib.ESenseScanner

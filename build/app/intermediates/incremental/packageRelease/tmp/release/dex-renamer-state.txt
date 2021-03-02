@@ -1,0 +1,4 @@
+#Tue Mar 02 09:36:18 CET 2021
+base.0=/home/eddy/dev/projects/Flip_Counter/flip_counter/build/app/intermediates/dex/release/minifyReleaseWithR8/classes.dex
+path.0=classes.dex
+renamed.0=classes.dex
