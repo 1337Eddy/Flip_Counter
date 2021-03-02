@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:flip_counter/esense.dart';
-import 'package:flip_counter/progress.dart';
+import 'package:esense_flutter/esense.dart';
 import 'package:flip_counter/settings.dart';
 import 'package:flip_counter/stopwatch.dart';
 import 'package:flutter/material.dart';
@@ -13,22 +12,19 @@ class BottomBar extends StatefulWidget {
 
 class _BottomBarState extends State<BottomBar> {
   int _selectedIndex = 0;
-  ESense esense;
   Timer timer;
   bool connected = false;
   Icon iconConnected = new Icon(Icons.bluetooth_connected);
   Icon iconDisconnected = new Icon(Icons.bluetooth_disabled);
 
-  IconButton bluetoothSymbol =
-      new IconButton(icon: const Icon(Icons.bluetooth_disabled));
+  IconButton bluetoothSymbol = new IconButton(
+    onPressed: () => ESenseManager().connect(DefaultSettings.eSenseName),
+    icon: new Icon(Icons.bluetooth_disabled),
+  );
 
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
-  static List<Widget> _widgetOptions = <Widget>[
-    TimerPage(),
-    ProgressPage(),
-    Settings()
-  ];
+  static List<Widget> _widgetOptions = <Widget>[TimerPage(), Settings()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -36,39 +32,31 @@ class _BottomBarState extends State<BottomBar> {
     });
   }
 
-  void refreshConnection() {
-    esense.connectToEsense();
-  }
-
-  void setBluethoothIcon() {
-    setState(() {
-      if (esense.status == Status.CONNECTED) {
-        bluetoothSymbol =
-            new IconButton(onPressed: refreshConnection, icon: iconConnected);
-        connected = true;
-      } else {
-        bluetoothSymbol = new IconButton(
-            onPressed: refreshConnection, icon: iconDisconnected);
-        connected = false;
-      }
-    });
-  }
-
-  void checkConnection(Timer timer) {
-    if (connected && bluetoothSymbol.icon == iconDisconnected) {
-      setBluethoothIcon();
-    } else if (!connected && bluetoothSymbol.icon == iconConnected) {
-      setBluethoothIcon();
-    }
+  Future<void> setBluethoothIcon(Timer timer) async {
+    var connected = ESenseManager().isConnected();
+    connected.then((connect) => {
+          setState(() {
+            if (connect) {
+              bluetoothSymbol = new IconButton(
+                icon: new Icon(Icons.bluetooth_connected),
+                onPressed: () => {},
+              );
+            } else {
+              bluetoothSymbol = new IconButton(
+                onPressed: () =>
+                    ESenseManager().connect(DefaultSettings.eSenseName),
+                icon: new Icon(Icons.bluetooth_disabled),
+              );
+            }
+          })
+        });
   }
 
   @override
   void initState() {
-    esense = new ESense(DefaultSettings.eSenseName);
-    //esense.connectToEsense();
-
-    //timer =
-    //    new Timer.periodic(new Duration(milliseconds: 1000), checkConnection);
+    timer =
+        new Timer.periodic(new Duration(milliseconds: 500), setBluethoothIcon);
+    super.initState();
   }
 
   @override
@@ -85,10 +73,6 @@ class _BottomBarState extends State<BottomBar> {
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.insights),
-            label: 'Fortschritt',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),

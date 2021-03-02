@@ -1,13 +1,11 @@
 import 'package:esense_flutter/esense.dart';
-import 'package:flip_counter/esense.dart';
-import 'package:flip_counter/settings.dart';
 import 'package:flutter/material.dart';
 import 'timertext.dart';
 import 'dart:async';
 
 enum ButtonLabel { start, stop, reset }
 
-enum FlipPhase { phase1, frontPhase2, backPhase2, frontPhase3, backPhase3 }
+enum States { start, f1, f2, f3, front, back }
 
 class ElapsedTime {
   final int hundreds;
@@ -41,14 +39,22 @@ class TimerPageState extends State<TimerPage> {
   int back = 0;
   double frequency = 0;
   Timer timer;
-  ESense esense;
   StreamSubscription subscription;
-  List<List<int>> fifo;
-  FlipPhase flipPhase = FlipPhase.phase1;
+  States state = States.start;
+  int countValues = 0;
 
   final Dependencies dependencies = new Dependencies();
 
   void resetPressed() {
+    var connected = ESenseManager().isConnected();
+    connected.then((connect) => {
+          setState(() {
+            if (connect) {
+              subscription.cancel();
+            }
+          })
+        });
+
     setState(() {
       dependencies.stopwatch.stop();
       dependencies.stopwatch.reset();
@@ -57,50 +63,103 @@ class TimerPageState extends State<TimerPage> {
     });
   }
 
-/*
-  void detectFlip() {
-    if (dependencies.stopwatch.isRunning) {
-      ESenseManager().setSamplingRate(20);
-      subscription = ESenseManager().sensorEvents.listen((event) {
-        fifo.add(event.accel);
-        fifo.removeAt(0);
-        analysePattern();
-      });
-    }
+  void listenToSensorEvents() async {
+    ESenseManager().setSamplingRate(20);
+    var connected = ESenseManager().isConnected();
+    connected.then((value) => {
+          subscription = ESenseManager().sensorEvents.listen(
+            (event) {
+              List<int> values = event.accel;
+              int x = values[0];
+              int y = values[1];
+              int z = values[2];
+              int valueRefreshed = 25;
+
+              // Conditions
+              bool startToF1 = x < -20000;
+              bool toBack = x < -15000;
+              bool toFront = x < -20000;
+              bool f1ToF2 = x > 15000 && y > 20000 && z < -15000;
+              bool f1ToF3 = x > 25000 && y > 9000 && z < -15000;
+              bool f2ToF3;
+              bool f3ToF4;
+
+              switch (state) {
+                case States.start:
+                  if (startToF1) {
+                    state = States.f1;
+                  } else {
+                    state = States.start;
+                    countValues = 0;
+                  }
+                  break;
+
+                case States.f1:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (f1ToF2) {
+                    countValues = 0;
+                    state = States.f2;
+                  } else if (f1ToF3) {
+                    state = States.f3;
+                  } else {
+                    state = States.f1;
+                  }
+                  countValues++;
+                  break;
+
+                case States.f2:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (toBack) {
+                    countValues = 0;
+                    state = States.back;
+                  } else {
+                    state = States.f2;
+                  }
+                  countValues++;
+                  break;
+
+                case States.f3:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (toFront) {
+                    countValues = 0;
+                    state = States.front;
+                  } else {
+                    state = States.f3;
+                  }
+                  countValues++;
+                  break;
+
+                case States.front:
+                  state = States.start;
+                  countValues = 0;
+                  setState(() {
+                    front++;
+                  });
+                  break;
+
+                case States.back:
+                  setState(() {
+                    back++;
+                  });
+                  state = States.start;
+                  break;
+              }
+            },
+          )
+        });
   }
 
-  void analysePattern() {
-    flipPhase = FlipPhase.phase1;
-    for (int i = 0; i < fifo.length; i++) {
-      switch (flipPhase) {
-        case FlipPhase.phase1:
-          if (fifo[i][0] > 0) {
-            flipPhase = FlipPhase.frontPhase2;
-          }
-          break;
-        case FlipPhase.frontPhase2:
-          if (fifo[i][0] > 500) {
-            flipPhase = FlipPhase.frontPhase3;
-          }
-          break;
-        case FlipPhase.frontPhase3:
-          if (fifo[i][0] < 0) {
-            addfront();
-          }
-          break;
-        default:
-      }
-      if (fifo[i][0] / 10 == 3) {}
-    }
-  }
-*/
   void startStopPressed() {
     setState(() {
-      if (!dependencies.stopwatch.isRunning &&
-          esense.status == Status.CONNECTED) {
-        dependencies.stopwatch.start();
-      } else {
+      if (dependencies.stopwatch.isRunning) {
         dependencies.stopwatch.stop();
+        subscription.cancel();
+      } else {
+        dependencies.stopwatch.start();
+        listenToSensorEvents();
       }
     });
   }
@@ -134,19 +193,9 @@ class TimerPageState extends State<TimerPage> {
     }
   }
 
-  void initFifo() {
-    for (int i = 0; i < 30; i++) {
-      List<int> zero = [0, 0, 0];
-      fifo.add(zero);
-    }
-  }
-
   @override
   void initState() {
-    initFifo();
     timer = new Timer.periodic(new Duration(milliseconds: 100), callback);
-    esense = new ESense(DefaultSettings.eSenseName);
-    esense.connectToEsense();
     super.initState();
   }
 
@@ -221,26 +270,6 @@ class TimerPageState extends State<TimerPage> {
                         : ButtonLabel.start,
                     startStopPressed),
                 buildFloatingButton(ButtonLabel.reset, resetPressed),
-              ],
-            ),
-          ),
-        ),
-
-        new Expanded(
-          flex: 0,
-          child: new Padding(
-            padding: const EdgeInsets.symmetric(vertical: 50.0),
-            child: new Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                new ElevatedButton(
-                  child: new Text("Front"),
-                  onPressed: addfront,
-                ),
-                new ElevatedButton(
-                  child: new Text("Back"),
-                  onPressed: addback,
-                )
               ],
             ),
           ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:esense_flutter/esense.dart';
 
+enum States { start, q1, q2, q3, front, back }
+
 class DefaultSettings {
   static String eSenseName = 'eSense-0264';
 }
@@ -16,26 +18,34 @@ class _SettingsState extends State<Settings> {
   double _voltage = -1;
   String _deviceStatus = '';
   bool sampling = false;
-  String _event = '';
-  String _button = 'not pressed';
   bool connected = false;
+  int counter = 0;
+  String buttonPress = "not tabbed";
+  int buttonPressCounter = 0;
+  int countValues = 0;
+
+  List<DataRow> rows = [];
 
   // the name of the eSense device to connect to -- change this to your own device.
 
-  String _xAxis = "undefined";
-  String _yAxis = "undefined";
-  String _zAxis = "undefined";
+  String _xAxis = "null";
+  String _yAxis = "null";
+  String _zAxis = "null";
   String sensorConfig = "undefined";
-  int counterA = 0;
-  int counterB = 0;
+  int front = 0;
+  int back = 0;
+
+  States state = States.start;
 
   StreamSubscription subscription;
 
   Timer timer;
 
   void initState() {
-    super.initState();
     _listenToESense();
+    //listenToSensorEvents();
+
+    super.initState();
   }
 
   Future _listenToESense() async {
@@ -45,7 +55,9 @@ class _SettingsState extends State<Settings> {
       print('CONNECTION event: $event');
 
       // when we're connected to the eSense device, we can start listening to events from it
-      if (event.type == ConnectionType.connected) _listenToESenseEvents();
+      if (event.type == ConnectionType.connected) {
+        _listenToESenseEvents();
+      }
 
       setState(() {
         connected = false;
@@ -70,31 +82,116 @@ class _SettingsState extends State<Settings> {
       });
     });
   }
-
+/*
   Future _connectToESense() async {
-    print('connecting... connected: $connected');
     if (!connected)
       connected = await ESenseManager().connect(DefaultSettings.eSenseName);
-    print("Connected in Settings $connected");
     setState(() {
       _deviceStatus = connected ? 'connecting' : 'connection failed';
     });
   }
+*/
 
   void listenToSensorEvents() async {
-    if (ESenseManager().connected) {
-      subscription = ESenseManager().sensorEvents.listen((event) {
-        List<int> values = event.accel;
-        setState(() {
-          _xAxis = (values[0] / 10).toString();
-          _yAxis = (values[1] / 10).toString();
-          _zAxis = (values[2] / 10).toString();
+    ESenseManager().setSamplingRate(20);
+    var connected = ESenseManager().isConnected();
+    connected.then((value) => {
+          subscription = ESenseManager().sensorEvents.listen(
+            (event) {
+              List<int> values = event.accel;
+              int x = values[0];
+              int y = values[1];
+              int z = values[2];
+              int valueRefreshed = 25;
+
+              // Conditions
+              bool startToQ1 = x < -20000;
+              bool toBack = x < -15000;
+              bool toFront = x < -20000;
+              bool q1ToQ2 = x > 15000 && y > 20000 && z < -15000;
+              bool q1ToQ3 = x > 25000 && y > 9000 && z < -15000;
+
+              switch (state) {
+                case States.start:
+                  if (startToQ1) {
+                    state = States.q1;
+                  } else {
+                    state = States.start;
+                    countValues = 0;
+                  }
+                  break;
+
+                case States.q1:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (q1ToQ2) {
+                    countValues = 0;
+                    state = States.q2;
+                  } else if (q1ToQ3) {
+                    state = States.q3;
+                  } else {
+                    state = States.q1;
+                  }
+                  countValues++;
+                  break;
+
+                case States.q2:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (toBack) {
+                    countValues = 0;
+                    state = States.back;
+                  } else {
+                    state = States.q2;
+                  }
+                  countValues++;
+                  break;
+
+                case States.q3:
+                  if (countValues > valueRefreshed) {
+                    state = States.start;
+                  } else if (toFront) {
+                    countValues = 0;
+                    state = States.front;
+                  } else {
+                    state = States.q3;
+                  }
+                  countValues++;
+                  break;
+
+                case States.front:
+                  state = States.start;
+                  countValues = 0;
+                  setState(() {
+                    front++;
+                  });
+                  break;
+
+                case States.back:
+                  setState(() {
+                    back++;
+                  });
+                  state = States.start;
+                  break;
+              }
+              setState(() {
+                _xAxis = values[0].toString();
+                _yAxis = values[1].toString();
+                _zAxis = values[2].toString();
+
+                rows.add(DataRow(cells: [
+                  DataCell(Text("$_xAxis")),
+                  DataCell(Text("$_yAxis")),
+                  DataCell(Text("$_zAxis")),
+                ]));
+              });
+            },
+          )
         });
-      });
-    }
   }
 
   void _listenToESenseEvents() async {
+    ESenseManager().setSamplingRate(20);
     ESenseManager().eSenseEvents.listen((event) {
       print('ESENSE event: $event');
 
@@ -105,15 +202,8 @@ class _SettingsState extends State<Settings> {
             break;
           case BatteryRead:
             _voltage = (event as BatteryRead).voltage;
-            counterB++;
-            break;
-          case ButtonEventChanged:
-            _button = (event as ButtonEventChanged).pressed
-                ? 'pressed'
-                : 'not pressed';
             break;
           case AccelerometerOffsetRead:
-            listenToSensorEvents();
             break;
           case AdvertisementAndConnectionIntervalRead:
             // TODO
@@ -151,79 +241,83 @@ class _SettingsState extends State<Settings> {
         () async => await ESenseManager().getSensorConfig());
   }
 
-  void _startListenToSensorEvents() async {
-    // subscribe to sensor event from the eSense device
-    subscription = ESenseManager().sensorEvents.listen((event) {
-      print('SENSOR event: $event');
-      setState(() {
-        _event = event.toString();
-      });
-    });
-    setState(() {
-      sampling = true;
-    });
-  }
-
-  void _pauseListenToSensorEvents() async {
-    subscription.cancel();
-    setState(() {
-      sampling = false;
-    });
-  }
-
-  void dispose() {
-    _pauseListenToSensorEvents();
-    ESenseManager().disconnect();
-    super.dispose();
-  }
-
   Widget build(BuildContext context) {
-    return new Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('eSense Device Status: \t$_deviceStatus'),
-        Text('eSense Battery Level: \t$_voltage'),
-        Text('xAxis: \t$_xAxis'),
-        Text('yAxis: \t$_yAxis'),
-        Text('zAxis: \t$_zAxis'),
-        Text('\t$_button'),
-        TextFormField(
-          initialValue: DefaultSettings.eSenseName,
-          onChanged: (text) {
-            DefaultSettings.eSenseName = text;
-          },
-          decoration: InputDecoration(
-              border: OutlineInputBorder(), labelText: 'Gerätename'),
-        ),
-        Text('$_event'),
-        Container(
-          height: 40,
-          width: 200,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
-          child: TextButton.icon(
-            onPressed: _connectToESense,
-            icon: Icon(Icons.login),
-            label: Text(
-              'connect',
-              style: TextStyle(fontSize: 25),
+    return SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: new Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            new Padding(
+                padding: const EdgeInsets.symmetric(vertical: 55.0),
+                child: TextFormField(
+                  initialValue: DefaultSettings.eSenseName,
+                  onChanged: (text) {
+                    DefaultSettings.eSenseName = text;
+                  },
+                  decoration: InputDecoration(
+                      border: OutlineInputBorder(), labelText: 'Gerätename'),
+                )),
+            Center(
+                child: new Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 15.0),
+                    child: Text('Geräte Status: \t$_deviceStatus'))),
+            Center(
+              child: new Padding(
+                padding: const EdgeInsets.symmetric(vertical: 15.0),
+                child: Text('Batterie Status: \t$_voltage'),
+              ),
             ),
-          ),
-        ),
-      ],
-    );
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 15.0),
+              child: new Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    child: new Text("Start"),
+                    onPressed: listenToSensorEvents,
+                  ),
+                  ElevatedButton(
+                    child: new Text("Stop"),
+                    onPressed: () => {subscription.pause()},
+                  ),
+                  ElevatedButton(
+                    child: new Text("Delete Table"),
+                    onPressed: () => setState(() {
+                      rows = [];
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 15.0),
+              child: new Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text('x-Achse: \t$_xAxis'),
+                  Text('y-Achse: \t$_yAxis'),
+                  Text('z-Achse: \t$_zAxis'),
+                ],
+              ),
+            ),
+            new Padding(
+              padding: const EdgeInsets.symmetric(vertical: 15.0),
+              child: new Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text('Frontflip: \t$front'),
+                  Text('Backflip: \t$back'),
+                ],
+              ),
+            ),
+            Center(
+              child: DataTable(columns: [
+                DataColumn(label: Text("x-Achse")),
+                DataColumn(label: Text("y-Achse")),
+                DataColumn(label: Text("z-Achse"))
+              ], rows: rows),
+            )
+          ],
+        ));
   }
 }
-
-/*
-floatingActionButton: FloatingActionButton(
-          // a floating button that starts/stops listening to sensor events.
-          // is disabled until we're connected to the device.
-          onPressed: (!ESenseManager().connected)
-              ? null
-              : (!sampling)
-                  ? _startListenToSensorEvents
-                  : _pauseListenToSensorEvents,
-          tooltip: 'Listen to eSense sensors',
-          child: (!sampling) ? Icon(Icons.play_arrow) : Icon(Icons.pause),
-        )
-*/
